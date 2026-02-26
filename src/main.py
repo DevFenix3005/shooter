@@ -1,5 +1,7 @@
 from enum import Enum
+from pathlib import Path
 from random import randint
+from tempfile import gettempdir
 
 from pygame import (
     KEYDOWN,
@@ -49,6 +51,62 @@ class GameState(Enum):
     LOSE = "lose"
 
 
+
+def generate_theme_assets() -> dict[str, str]:
+    theme_dir = Path(gettempdir()) / "kirby_broco_theme"
+    theme_dir.mkdir(parents=True, exist_ok=True)
+
+    def save(surface, filename: str) -> str:
+        file_path = theme_dir / filename
+        image.save(surface, file_path)
+        return str(file_path)
+
+    # Kirby con brócoli
+    kirby = image.load(IMG_HERO).convert_alpha()
+    kirby = transform.scale(kirby, (128, 128))
+    draw.circle(kirby, (42, 140, 60), (108, 64), 16)
+    draw.rect(kirby, (138, 90, 55), Rect(96, 58, 14, 12))
+
+    # Proyectil de brócoli
+    broccoli = sprite.Surface((64, 64), sprite.SRCALPHA)
+    draw.rect(broccoli, (140, 94, 60), Rect(26, 36, 12, 22))
+    draw.circle(broccoli, (55, 170, 76), (24, 26), 10)
+    draw.circle(broccoli, (55, 170, 76), (34, 20), 11)
+    draw.circle(broccoli, (55, 170, 76), (42, 28), 9)
+
+    # Comida chatarra
+    burger = sprite.Surface((128, 128), sprite.SRCALPHA)
+    draw.ellipse(burger, (240, 175, 75), Rect(22, 24, 84, 26))
+    draw.rect(burger, (120, 75, 45), Rect(20, 48, 88, 18))
+    draw.rect(burger, (95, 180, 70), Rect(24, 64, 80, 8))
+    draw.rect(burger, (255, 210, 95), Rect(20, 72, 88, 14))
+    draw.ellipse(burger, (230, 160, 65), Rect(22, 84, 84, 26))
+
+    fries = sprite.Surface((128, 128), sprite.SRCALPHA)
+    draw.rect(fries, (210, 30, 30), Rect(30, 34, 68, 72), border_radius=12)
+    for x in range(36, 95, 10):
+        draw.rect(fries, (248, 210, 92), Rect(x, 20, 8, 30))
+
+    donut = sprite.Surface((128, 128), sprite.SRCALPHA)
+    draw.circle(donut, (232, 174, 116), (64, 64), 42)
+    draw.circle(donut, (180, 120, 70), (64, 64), 20)
+
+    # Fondo candy
+    background = sprite.Surface((WIN_WIDTH, WIN_HEIGHT))
+    for y in range(WIN_HEIGHT):
+        color = (min(255, 30 + y // 6), min(255, 20 + y // 5), min(255, 70 + y // 8))
+        draw.line(background, color, (0, y), (WIN_WIDTH, y))
+
+    return {
+        "hero": save(kirby, "kirby.png"),
+        "bullet": save(broccoli, "broccoli_bullet.png"),
+        "enemy": save(burger, "junk_food_burger.png"),
+        "enemy_lvl3": save(fries, "junk_food_fries.png"),
+        "asteroid": save(donut, "junk_food_donut.png"),
+        "background": save(background, "candy_sky.png"),
+    }
+
+
 def create_asteroid(group, num_objects) -> None:
     for _ in range(num_objects):
         asteroid = Asteroid(
@@ -94,12 +152,26 @@ def setup() -> None:
     global last_shot_time
     global game_state
     global assets
+    global IMG_ASTEROID
+    global IMG_BACK
+    global IMG_ENEMY
+    global IMG_ENEMY_LVL3
+    global IMG_HERO
+    global generated_bullet_image
 
     _font.init()
     mixer.init()
 
-    display.set_caption("SpaceGunner")
+    display.set_caption("Kirby Broco Blaster")
     window = display.set_mode((WIN_WIDTH, WIN_HEIGHT))
+
+    theme_assets = generate_theme_assets()
+    IMG_BACK = theme_assets["background"]
+    IMG_HERO = theme_assets["hero"]
+    IMG_ENEMY = theme_assets["enemy"]
+    IMG_ENEMY_LVL3 = theme_assets["enemy_lvl3"]
+    IMG_ASTEROID = theme_assets["asteroid"]
+    generated_bullet_image = theme_assets["bullet"]
 
     assets = {
         "music": "./assets/Attack.mp3",
@@ -130,7 +202,16 @@ def setup() -> None:
     asteroids = sprite.Group()
     explosions = sprite.Group()
 
-    ship = Player(IMG_HERO, 5, WIN_HEIGHT - 100, 80, 100, 10, bullets)
+    ship = Player(
+        IMG_HERO,
+        5,
+        WIN_HEIGHT - 100,
+        80,
+        100,
+        10,
+        bullets,
+        bullet_image=generated_bullet_image,
+    )
     create_ufo(monsters, 5, table_score)
     create_asteroid(asteroids, 3)
 
@@ -171,7 +252,7 @@ def draw_hud() -> None:
     score_text = font.render(f"Puntaje: {table_score.score}", True, WHITE)
     lose_text = font.render(f"Falló: {table_score.lost}/{table_score.max_lost}", True, WHITE)
     level = 3 if (table_score.score // 10) >= 3 else 1
-    level_text = small_font.render(f"Nivel enemigo: {level}", True, YELLOW)
+    level_text = small_font.render(f"Nivel de comida chatarra: {level}", True, YELLOW)
     help_text = small_font.render("ESPACIO: disparar | P: pausar", True, WHITE)
 
     window.blit(score_text, (10, 15))
@@ -182,7 +263,7 @@ def draw_hud() -> None:
 
 def draw_menu() -> None:
     window.blit(background, (0, 0))
-    title = font.render("SpaceGunner", True, WHITE)
+    title = font.render("Kirby Broco Blaster", True, WHITE)
     subtitle = small_font.render("ENTER para jugar", True, YELLOW)
     controls = small_font.render("Flechas para mover, ESPACIO para disparar", True, WHITE)
 
@@ -221,7 +302,16 @@ def reset_match() -> None:
     asteroids.empty()
     explosions.empty()
 
-    ship = Player(IMG_HERO, 5, WIN_HEIGHT - 100, 80, 100, 10, bullets)
+    ship = Player(
+        IMG_HERO,
+        5,
+        WIN_HEIGHT - 100,
+        80,
+        100,
+        10,
+        bullets,
+        bullet_image=generated_bullet_image,
+    )
     create_ufo(monsters, 5, table_score)
     create_asteroid(asteroids, 3)
     game_state = GameState.PLAYING

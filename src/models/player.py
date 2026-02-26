@@ -7,10 +7,19 @@ from constants import WIN_WIDTH, WIN_HEIGHT, IMG_BULLET
 # clase de jugador principal
 class Player(GameSprite):
     def __init__(
-        self, player_image, player_x, player_y, size_x, size_y, player_speed, bullets
+        self,
+        player_image,
+        player_x,
+        player_y,
+        size_x,
+        size_y,
+        player_speed,
+        bullets,
+        bullet_image=IMG_BULLET,
     ):
         super().__init__(player_image, player_x, player_y, size_x, size_y, player_speed)
         self.__bullets = bullets
+        self.__bullet_image = bullet_image
 
     # método para controlar el objeto con las flechas del teclado
     def update(self):
@@ -29,5 +38,5 @@ class Player(GameSprite):
 
     # el método “disparo” (usamos la posición del jugador para crear una bala)
     def fire(self):
-        bullet = Bullet(IMG_BULLET, self.rect.centerx, self.rect.top, 15, 20, -15)
+        bullet = Bullet(self.__bullet_image, self.rect.centerx, self.rect.top, 15, 20, -15)
         self.__bullets.add(bullet)

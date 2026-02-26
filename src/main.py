@@ -77,7 +77,7 @@ def generate_theme_assets() -> dict[str, str]:
     draw.circle(broccoli, (55, 170, 76), (42, 28), 9)
 
     # Comida chatarra
-    burger = Surface((128, 128), SRCALPHA)
+    burger = Surface((128, 128), sprite.SRCALPHA)
     draw.ellipse(burger, (240, 175, 75), Rect(22, 24, 84, 26))
     draw.rect(burger, (120, 75, 45), Rect(20, 48, 88, 18))
     draw.rect(burger, (95, 180, 70), Rect(24, 64, 80, 8))
